@@ -97,8 +97,6 @@ router.post('/login', validationRules, (req: Request, res: Response) => {
 });
 
 router.post('/refresh', authenticate, (req: Request, res: Response) => {
-    // const errors = validee
-
     try {
         const decoded = jwt.verify(req.body.refreshToken, secretKey);
         const accessToken = jwt.sign({ userId: decoded.userId, login: decoded.login }, secretKey, { expiresIn: '1h' });
@@ -109,9 +107,8 @@ router.post('/refresh', authenticate, (req: Request, res: Response) => {
     }
 });
 
-router.get('/users', (req: Request, res: Response) => {
-    // const errors =
-        res.status(200).json({ success: true, users: users })
+router.get('/users', authenticate, (req: Request, res: Response) => {
+    res.status(200).json({ success: true, users: users })
 });
 
 
