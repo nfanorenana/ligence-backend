@@ -20,10 +20,6 @@ const validationRules = [
     body('password').isString().withMessage('Password must be a string'),
 ]
 
-const refreshTokenValidation = [
-    body('refreshToken').notEmpty().withMessage('Refresh token is required')
-]
-
 const authenticate = (req: Request, res: Response, next: () => void) => {
     const bearerHeader = req.headers['authorization'];
     
@@ -32,15 +28,15 @@ const authenticate = (req: Request, res: Response, next: () => void) => {
         const token = bearer[1];
 
         if (!token) {
-          return res.status(401).send('Access Denied. No token provided.');
+          return res.status(401).send({ success: false, msg:'Access Denied. No token provided.'});
         }
     
         try {
-        const decoded = jwt.verify(token, secretKey);
-        req.body.user = decoded;
+            const decoded = jwt.verify(token, secretKey);
+            req.body.user = decoded;
         next();
         } catch (error) {
-        return res.status(400).send('Invalid Token.');
+            return res.status(400).send({ success: false, msg:'Invalid Token.'});
         }
 
     }
