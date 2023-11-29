@@ -20,28 +20,42 @@ const validationRules = [
     body('password').isString().withMessage('Password must be a string'),
 ]
 
+
+const extractToken = (bearerHeader: string | undefined): string => {
+    let token = '';
+    if (typeof bearerHeader !== 'undefined') {
+        const bearer = bearerHeader.split(' ');
+        token = bearer[1];
+    }
+    return token;
+}
+
+const extractUserFromToken = (token: string): User => {
+    const decoded = jwt.verify(token, secretKey);
+    return decoded;
+}
+
 const authenticate = (req: Request, res: Response, next: () => void) => {
     const bearerHeader = req.headers['authorization'];
     
-    if (typeof bearerHeader !== 'undefined') {
-        const bearer = bearerHeader.split(' ');
-        const token = bearer[1];
+    // if (typeof bearerHeader !== 'undefined') {
+        const token = extractToken(bearerHeader)
 
         if (!token) {
-          return res.status(401).send({ success: false, msg:'Access Denied. No token provided.'});
+        return res.status(401).send({ success: false, msg:'Access Denied. No token provided.'});
         }
     
         try {
-            const decoded = jwt.verify(token, secretKey);
-            req.body.user = decoded;
-        next();
+            req.body.user = extractUserFromToken(token);
+            next();
         } catch (error) {
             return res.status(400).send({ success: false, msg:'Invalid Token.'});
         }
-
-    }
+    // }
     
 };
+
+
 
 router.post('/signup', validationRules, (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -109,6 +123,32 @@ router.post('/refresh', authenticate, (req: Request, res: Response) => {
 
 router.get('/users', authenticate, (req: Request, res: Response) => {
     res.status(200).json({ success: true, users: users })
+});
+
+router.get('/recommendations', authenticate, (req: Request, res: Response) => {
+    const token = extractToken(req.headers['authorization']);
+    const userLogged = extractUserFromToken(token);
+    
+    let recommendations = [];
+
+    const userArray = [...userLogged.login];
+
+    for(const user of users.filter(item => item.login != userLogged.login)) {
+        let tmp = [...user.login];
+        let intersection = userArray.filter(x => tmp.includes(x));
+        let union = [...new Set([...userArray, ...tmp])];
+
+        // console.log(user.login);
+        // console.log(intersection.length/union.length);
+        // console.log('==============================');
+        
+
+        recommendations.push({login: user.login, similarity: intersection.length/union.length})
+    }
+
+    recommendations.sort((a, b) => b.similarity - a.similarity);
+
+    res.status(200).json({success: true, recommendations: recommendations.map(item => item.login)})
 });
 
 
